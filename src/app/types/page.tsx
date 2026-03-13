@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import resultsData from "@/data/results.json";
 
 type ResultType = {
@@ -14,14 +14,14 @@ type ResultType = {
   accentColor: string;
 };
 
-const container = {
+const container: Variants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.04 } },
 };
 
-const item = {
+const item: Variants = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: "easeOut" } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: "easeOut" as const } },
 };
 
 const AXIS_LABELS = [
