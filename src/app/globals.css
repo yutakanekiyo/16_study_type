@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #e8e8f0;
+  --background: #f5f3ff;
+  --foreground: #1e1b4b;
+  --card: #ffffff;
+  --primary: #6d28d9;
+  --primary-light: #ede9fe;
+  --border: #e4e0f7;
+  --muted: #6b7280;
 }
 
 body {
@@ -21,6 +26,6 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(109, 40, 217, 0.2);
   border-radius: 2px;
 }

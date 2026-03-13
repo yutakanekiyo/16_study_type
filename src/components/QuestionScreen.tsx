@@ -1,8 +1,8 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
-import questionsData from "@/data/questions.json";
+import { type Rating } from "@/hooks/useDiagnosis";
 
 interface Question {
   id: number;
@@ -13,200 +13,228 @@ interface Question {
 }
 
 interface QuestionScreenProps {
-  currentQuestion: Question;
-  currentIndex: number;
-  totalQuestions: number;
-  progress: number;
-  onAnswer: (choice: "A" | "B") => void;
+  currentPage: number;
+  totalPages: number;
+  pageQuestions: Question[];
+  pageAnswers: (Rating | null)[];
+  canSubmitPage: boolean;
+  onSetAnswer: (index: number, rating: Rating) => void;
+  onSubmitPage: () => void;
 }
 
-const axisLabels: Record<string, { short: string; color: string }> = {
-  PS: { short: "集中スイッチ", color: "#818cf8" },
-  LC: { short: "理解の入り口", color: "#34d399" },
-  RB: { short: "進行スタイル", color: "#fb923c" },
-  TI: { short: "記憶の回路", color: "#f472b6" },
-};
+// 両端を大きく、中央を小さく
+const BUTTON_SIZES = [44, 34, 26, 26, 34, 44];
 
 export default function QuestionScreen({
-  currentQuestion,
-  currentIndex,
-  totalQuestions,
-  progress,
-  onAnswer,
+  currentPage,
+  totalPages,
+  pageQuestions,
+  pageAnswers,
+  canSubmitPage,
+  onSetAnswer,
+  onSubmitPage,
 }: QuestionScreenProps) {
-  const [selected, setSelected] = useState<"A" | "B" | null>(null);
-  const [direction, setDirection] = useState(1);
+  const isLastPage = currentPage + 1 >= totalPages;
+  const answeredCount = pageAnswers.filter((a) => a !== null).length;
+  const totalQuestions = totalPages * 5;
+  const totalAnswered = currentPage * 6 + answeredCount;
+  const remaining = totalQuestions - totalAnswered;
 
-  // Reset selection when question changes
-  useEffect(() => {
-    setSelected(null);
-  }, [currentIndex]);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const submitRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSelect = (choice: "A" | "B") => {
-    if (selected) return;
-    setSelected(choice);
-    setDirection(1);
-    setTimeout(() => {
-      onAnswer(choice);
-    }, 350);
+  const scrollToCard = (idx: number) => {
+    const el = cardRefs.current[idx];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   };
 
-  const axisInfo = axisLabels[currentQuestion.axis] ?? { short: "", color: "#818cf8" };
-  const axisData = questionsData.axes.find((a) => a.id === currentQuestion.axis);
+  // ページ切り替え時：最初の未回答質問を中央へ
+  useEffect(() => {
+    const firstUnanswered = pageAnswers.findIndex((a) => a === null);
+    const targetIdx = firstUnanswered === -1 ? 0 : firstUnanswered;
+    const timer = setTimeout(() => scrollToCard(targetIdx), 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  const handleSetAnswer = (idx: number, rating: Rating) => {
+    onSetAnswer(idx, rating);
+
+    // 次の未回答へスクロール
+    setTimeout(() => {
+      const nextUnanswered = pageAnswers.findIndex(
+        (a, i) => i > idx && a === null
+      );
+      if (nextUnanswered !== -1) {
+        scrollToCard(nextUnanswered);
+      } else {
+        // 全問回答済み → 送信ボタンへ
+        submitRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col px-4 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <motion.div
-            className="flex items-center gap-2"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <span
-              className="text-xs font-semibold px-2 py-1 rounded-md"
-              style={{
-                color: axisInfo.color,
-                backgroundColor: `${axisInfo.color}18`,
-                border: `1px solid ${axisInfo.color}30`,
-              }}
-            >
-              {axisInfo.short}
-            </span>
-          </motion.div>
-          <motion.span
-            className="text-xs text-white/40 tabular-nums"
-            key={currentIndex}
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {currentIndex + 1} / {totalQuestions}
-          </motion.span>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* 進捗エリア */}
+      <div className="px-5 pt-6 pb-3 w-full max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-gray-400 font-medium">
+            残り<span className="text-violet-500 font-bold text-sm mx-0.5">{remaining}</span>問
+          </span>
+          <span className="text-xs text-gray-400">{totalAnswered} / {totalQuestions}</span>
         </div>
-
-        {/* Progress bar */}
-        <div className="h-1 bg-white/8 rounded-full overflow-hidden">
+        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
           <motion.div
-            className="h-full rounded-full"
-            style={{
-              background: `linear-gradient(90deg, ${axisInfo.color}80, ${axisInfo.color})`,
-            }}
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+            initial={false}
+            animate={{ width: `${(totalAnswered / totalQuestions) * 100}%` }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
-        </div>
-
-        {/* Axis indicators */}
-        <div className="flex gap-1 mt-2">
-          {questionsData.axes.map((axis) => {
-            const isActive = axis.id === currentQuestion.axis;
-            const aColor = axisLabels[axis.id]?.color ?? "#818cf8";
-            return (
-              <div
-                key={axis.id}
-                className="flex-1 h-0.5 rounded-full transition-all duration-300"
-                style={{
-                  backgroundColor: isActive ? aColor : "rgba(255,255,255,0.08)",
-                }}
-              />
-            );
-          })}
         </div>
       </div>
 
-      {/* Question card */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          className="flex-1 flex flex-col"
-          initial={{ opacity: 0, x: 30 * direction }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -30 * direction }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-          {/* Axis labels */}
-          {axisData && (
-            <div className="flex items-center justify-between mb-4 text-xs text-white/30">
-              <span>{axisData.aName}</span>
-              <span className="text-white/15">vs</span>
-              <span>{axisData.bName}</span>
-            </div>
-          )}
-
-          {/* Question text */}
-          <div className="mb-8">
-            <motion.p
-              className="text-lg font-medium leading-relaxed text-center text-white/90"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              Q{currentIndex + 1}. {currentQuestion.text}
-            </motion.p>
-          </div>
-
-          {/* Answer options */}
-          <div className="flex flex-col gap-4">
-            {(["A", "B"] as const).map((choice, idx) => {
-              const optionText = choice === "A" ? currentQuestion.optionA : currentQuestion.optionB;
-              const isSelected = selected === choice;
-              const isOther = selected !== null && selected !== choice;
+      {/* 質問リスト */}
+      <div className="flex-1 px-4 pt-2 pb-6 w-full max-w-2xl mx-auto">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+            className="flex flex-col gap-4"
+          >
+            {pageQuestions.map((q, idx) => {
+              const selected = pageAnswers[idx];
+              const globalNum = currentPage * 6 + idx + 1;
+              const isAnswered = selected !== null;
 
               return (
-                <motion.button
-                  key={choice}
-                  onClick={() => handleSelect(choice)}
-                  className="relative p-5 rounded-2xl text-left border transition-all duration-200 cursor-pointer overflow-hidden"
+                <motion.div
+                  key={q.id}
+                  ref={(el) => { cardRefs.current[idx] = el; }}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.3 }}
+                  className="rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200"
                   style={{
-                    borderColor: isSelected
-                      ? axisInfo.color
-                      : isOther
-                      ? "rgba(255,255,255,0.04)"
-                      : "rgba(255,255,255,0.1)",
-                    backgroundColor: isSelected
-                      ? `${axisInfo.color}15`
-                      : isOther
-                      ? "rgba(255,255,255,0.02)"
-                      : "rgba(255,255,255,0.05)",
-                    opacity: isOther ? 0.4 : 1,
+                    borderColor: isAnswered ? "#c4b5fd" : "#e5e7eb",
+                    boxShadow: isAnswered
+                      ? "0 2px 12px rgba(109,40,217,0.08)"
+                      : "0 1px 4px rgba(0,0,0,0.05)",
                   }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: isOther ? 0.4 : 1, y: 0 }}
-                  transition={{ delay: 0.15 + idx * 0.1, duration: 0.4 }}
-                  whileHover={!selected ? { scale: 1.02, borderColor: `${axisInfo.color}60` } : {}}
-                  whileTap={!selected ? { scale: 0.98 } : {}}
                 >
-                  {/* Selected indicator */}
-                  {isSelected && (
-                    <motion.div
-                      className="absolute inset-0 rounded-2xl opacity-20"
-                      style={{ backgroundColor: axisInfo.color }}
-                      initial={{ scale: 0, borderRadius: "50%" }}
-                      animate={{ scale: 1, borderRadius: "1rem" }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  )}
+                  {/* 質問番号 + テキスト */}
+                  <p className="text-[13px] font-semibold text-gray-800 leading-relaxed mb-4 text-center">
+                    <span className="text-violet-500 font-bold mr-1">Q{globalNum}.</span>
+                    {q.text}
+                  </p>
 
-                  <div className="relative flex items-start gap-3">
-                    <div
-                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-                      style={{
-                        backgroundColor: isSelected ? axisInfo.color : "rgba(255,255,255,0.08)",
-                        color: isSelected ? "#fff" : "rgba(255,255,255,0.4)",
-                      }}
-                    >
-                      {choice}
-                    </div>
-                    <p className="text-sm text-white/80 leading-relaxed">{optionText}</p>
+                  {/* 選択肢ラベル（縦積み） */}
+                  <div className="mb-3 text-center space-y-1">
+                    <p className="text-[12px] leading-snug text-violet-600">
+                      <span className="font-bold">A：</span>{q.optionA}
+                    </p>
+                    <p className="text-[12px] leading-snug text-indigo-500">
+                      <span className="font-bold">B：</span>{q.optionB}
+                    </p>
                   </div>
-                </motion.button>
+
+                  {/* 6段階ボタン */}
+                  <div className="flex items-center justify-center gap-2">
+                    {([1, 2, 3, 4, 5, 6] as Rating[]).map((rating, btnIdx) => {
+                      const size = BUTTON_SIZES[btnIdx];
+                      const isSelected = selected === rating;
+                      const isAside = rating <= 3;
+
+                      return (
+                        <button
+                          key={rating}
+                          onClick={() => handleSetAnswer(idx, rating)}
+                          className="rounded-full flex-shrink-0 border-2 cursor-pointer"
+                          style={{
+                            width: size,
+                            height: size,
+                            backgroundColor: isSelected
+                              ? isAside ? "#7c3aed" : "#4f46e5"
+                              : "white",
+                            borderColor: isSelected
+                              ? isAside ? "#7c3aed" : "#4f46e5"
+                              : isAnswered ? "#e5e7eb" : "#c4b5fd",
+                            transform: isSelected ? "scale(1.18)" : "scale(1)",
+                            boxShadow: isSelected
+                              ? `0 0 0 3px ${isAside ? "#7c3aed25" : "#4f46e525"}`
+                              : "none",
+                            opacity: isAnswered && !isSelected ? 0.3 : 1,
+                            transition: "all 0.15s ease",
+                          }}
+                          aria-label={`${rating}を選択`}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* A / B ラベル */}
+                  <div className="flex justify-between mt-1 px-0.5">
+                    <span className="text-[11px] font-bold text-violet-500">A</span>
+                    <span className="text-[11px] font-bold text-indigo-500">B</span>
+                  </div>
+                </motion.div>
               );
             })}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* 次へ / 結果を見るボタン */}
+        <motion.div
+          ref={submitRef}
+          className="mt-5 pb-10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <motion.button
+            onClick={onSubmitPage}
+            disabled={!canSubmitPage}
+            className="w-full md:max-w-sm md:mx-auto block py-4 rounded-2xl font-bold text-[15px] cursor-pointer transition-all duration-200"
+            style={{
+              background: canSubmitPage
+                ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
+                : "#f3f4f6",
+              color: canSubmitPage ? "white" : "#d1d5db",
+              boxShadow: canSubmitPage
+                ? "0 6px 24px rgba(109,40,217,0.28)"
+                : "none",
+            }}
+            whileTap={canSubmitPage ? { scale: 0.98 } : {}}
+          >
+            {!canSubmitPage
+              ? `あと ${pageQuestions.length - answeredCount} 問回答してください`
+              : isLastPage
+              ? "診断結果を見る →"
+              : "次へ →"}
+          </motion.button>
+
+          {/* ページドット */}
+          <div className="flex justify-center gap-2 mt-5">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === currentPage ? 22 : 6,
+                  height: 6,
+                  backgroundColor:
+                    i < currentPage ? "#7c3aed" : i === currentPage ? "#7c3aed" : "#e5e7eb",
+                }}
+              />
+            ))}
           </div>
         </motion.div>
-      </AnimatePresence>
+      </div>
     </div>
   );
 }

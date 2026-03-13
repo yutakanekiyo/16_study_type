@@ -10,30 +10,20 @@ import ResultScreen from "@/components/ResultScreen";
 export default function Home() {
   const {
     phase,
-    currentQuestion,
-    currentIndex,
-    totalQuestions,
-    progress,
+    currentPage,
+    totalPages,
+    pageQuestions,
+    pageAnswers,
+    canSubmitPage,
     result,
     start,
-    answer,
+    setAnswer,
+    submitPage,
     restart,
   } = useDiagnosis();
 
   return (
-    <main className="min-h-screen max-w-md mx-auto relative">
-      {/* Subtle grid pattern */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.015]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }}
-      />
-
+    <main className="min-h-screen relative">
       <AnimatePresence mode="wait">
         {phase === "top" && (
           <motion.div
@@ -47,7 +37,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {phase === "question" && currentQuestion && (
+        {phase === "question" && (
           <motion.div
             key="question"
             initial={{ opacity: 0, y: 20 }}
@@ -56,11 +46,13 @@ export default function Home() {
             transition={{ duration: 0.35 }}
           >
             <QuestionScreen
-              currentQuestion={currentQuestion}
-              currentIndex={currentIndex}
-              totalQuestions={totalQuestions}
-              progress={progress}
-              onAnswer={answer}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageQuestions={pageQuestions}
+              pageAnswers={pageAnswers}
+              canSubmitPage={canSubmitPage}
+              onSetAnswer={setAnswer}
+              onSubmitPage={submitPage}
             />
           </motion.div>
         )}

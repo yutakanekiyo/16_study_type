@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import questionsData from "@/data/questions.json";
 import resultsData from "@/data/results.json";
 
 type Phase = "top" | "question" | "analyzing" | "result";
+export type Rating = 1 | 2 | 3 | 4 | 5 | 6;
 
 interface Scores {
   PS: { P: number; S: number };
@@ -30,6 +31,17 @@ export interface DiagnosisResult {
 }
 
 const { questions, axes } = questionsData;
+const QUESTIONS_PER_PAGE = 5;
+const TOTAL_PAGES = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function computeCode(scores: Scores): string {
   const axisMap = [
@@ -49,65 +61,88 @@ function computeCode(scores: Scores): string {
 
 export function useDiagnosis() {
   const [phase, setPhase] = useState<Phase>("top");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<("A" | "B")[]>([]);
+  const [shuffledQuestions, setShuffledQuestions] = useState(questions);
+  const [answers, setAnswers] = useState<(Rating | null)[]>(
+    new Array(questions.length).fill(null)
+  );
+  const [currentPage, setCurrentPage] = useState(0);
   const [resultCode, setResultCode] = useState<string | null>(null);
 
-  const totalQuestions = questions.length;
-  const progress = (currentIndex / totalQuestions) * 100;
+  const pageQuestions = useMemo(
+    () => shuffledQuestions.slice(
+      currentPage * QUESTIONS_PER_PAGE,
+      (currentPage + 1) * QUESTIONS_PER_PAGE
+    ),
+    [shuffledQuestions, currentPage]
+  );
 
-  const currentQuestion = questions[currentIndex] ?? null;
+  const pageAnswers = useMemo(
+    () => answers.slice(
+      currentPage * QUESTIONS_PER_PAGE,
+      (currentPage + 1) * QUESTIONS_PER_PAGE
+    ),
+    [answers, currentPage]
+  );
+
+  const canSubmitPage = pageAnswers.every((a) => a !== null);
+  const progress = (currentPage / TOTAL_PAGES) * 100;
 
   const start = useCallback(() => {
-    setPhase("question");
-    setCurrentIndex(0);
-    setAnswers([]);
+    setShuffledQuestions(shuffle(questions));
+    setAnswers(new Array(questions.length).fill(null));
+    setCurrentPage(0);
     setResultCode(null);
+    setPhase("question");
   }, []);
 
-  const answer = useCallback(
-    (choice: "A" | "B") => {
-      const newAnswers = [...answers, choice];
-      setAnswers(newAnswers);
+  const setAnswer = useCallback((questionIndexInPage: number, rating: Rating) => {
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[currentPage * QUESTIONS_PER_PAGE + questionIndexInPage] = rating;
+      return next;
+    });
+  }, [currentPage]);
 
-      if (currentIndex + 1 >= totalQuestions) {
-        // Calculate scores
-        const scores: Scores = {
-          PS: { P: 0, S: 0 },
-          LC: { L: 0, C: 0 },
-          RB: { R: 0, B: 0 },
-          TI: { T: 0, I: 0 },
-        };
+  const submitPage = useCallback(() => {
+    if (!canSubmitPage) return;
 
-        questions.forEach((q, i) => {
-          const ans = newAnswers[i];
-          const axis = q.axis as keyof Scores;
-          const axisInfo = axes.find((a) => a.id === axis)!;
-          if (ans === "A") {
-            (scores[axis][axisInfo.aLabel as keyof (typeof scores)[typeof axis]] as number)++;
-          } else {
-            (scores[axis][axisInfo.bLabel as keyof (typeof scores)[typeof axis]] as number)++;
-          }
-        });
+    if (currentPage + 1 >= TOTAL_PAGES) {
+      // All answered — compute result
+      const finalAnswers = answers;
+      const scores: Scores = {
+        PS: { P: 0, S: 0 },
+        LC: { L: 0, C: 0 },
+        RB: { R: 0, B: 0 },
+        TI: { T: 0, I: 0 },
+      };
 
-        const code = computeCode(scores);
-        setResultCode(code);
-        setPhase("analyzing");
+      shuffledQuestions.forEach((q, i) => {
+        const rating = finalAnswers[i];
+        if (rating === null) return;
+        const axis = q.axis as keyof Scores;
+        const axisInfo = axes.find((a) => a.id === axis)!;
+        // Rating 1-3 → A side, 4-6 → B side
+        if (rating <= 3) {
+          (scores[axis][axisInfo.aLabel as keyof (typeof scores)[typeof axis]] as number)++;
+        } else {
+          (scores[axis][axisInfo.bLabel as keyof (typeof scores)[typeof axis]] as number)++;
+        }
+      });
 
-        setTimeout(() => {
-          setPhase("result");
-        }, 3500);
-      } else {
-        setCurrentIndex((i) => i + 1);
-      }
-    },
-    [answers, currentIndex, totalQuestions]
-  );
+      const code = computeCode(scores);
+      setResultCode(code);
+      setPhase("analyzing");
+      setTimeout(() => setPhase("result"), 3500);
+    } else {
+      setCurrentPage((p) => p + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [canSubmitPage, currentPage, answers, shuffledQuestions]);
 
   const restart = useCallback(() => {
     setPhase("top");
-    setCurrentIndex(0);
-    setAnswers([]);
+    setCurrentPage(0);
+    setAnswers(new Array(questions.length).fill(null));
     setResultCode(null);
   }, []);
 
@@ -117,14 +152,17 @@ export function useDiagnosis() {
 
   return {
     phase,
-    currentQuestion,
-    currentIndex,
-    totalQuestions,
+    currentPage,
+    totalPages: TOTAL_PAGES,
+    pageQuestions,
+    pageAnswers,
+    canSubmitPage,
     progress,
     result,
     resultCode,
     start,
-    answer,
+    setAnswer,
+    submitPage,
     restart,
   };
 }
