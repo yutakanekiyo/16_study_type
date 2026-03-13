@@ -14,6 +14,7 @@ type ResultType = {
   tagline: string;
   color: string;
   accentColor: string;
+  saasMessage: string;
 };
 
 type TypeDetail = {
@@ -290,20 +291,76 @@ export default function TypeDetailPage({
             </div>
           </motion.div>
 
-          {/* ===== フッターボタン ===== */}
-          <motion.div variants={item} className="flex flex-col gap-3 pt-2">
-            <Link
-              href="/"
-              className="block w-full text-center py-4 rounded-2xl font-bold text-[15px] text-white transition-all duration-200 hover:opacity-90"
-              style={{ background: `linear-gradient(135deg, ${result.accentColor} 0%, #4338ca 100%)` }}
+          {/* ===== SaaS CTA ===== */}
+          <motion.div
+            variants={item}
+            className="rounded-3xl overflow-hidden shadow-md"
+            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)" }}
+          >
+            <div className="p-5">
+              <div className="text-[10px] text-violet-200 font-semibold tracking-widest uppercase mb-2">
+                🚀 Next Step
+              </div>
+              <h3 className="text-base font-bold text-white mb-1.5">
+                あなたの学習タイプに合わせた環境で学ぼう
+              </h3>
+              <p className="text-xs text-violet-100/80 leading-relaxed mb-4">
+                {result.saasMessage}
+                <br />
+                オンライン自習室とAI学習サポートで、{result.name}の力を最大限に引き出しましょう。
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <a
+                  href="#"
+                  className="flex-1 block text-center py-3.5 rounded-xl font-semibold text-sm text-[#6d28d9] bg-white cursor-pointer hover:bg-violet-50 transition-colors"
+                >
+                  無料でオンライン自習室を試す →
+                </a>
+                <a
+                  href="#"
+                  className="flex-1 block text-center py-3 rounded-xl text-xs text-white/70 border border-white/20 hover:border-white/40 transition-colors cursor-pointer"
+                >
+                  AI学習サポートについて詳しく見る
+                </a>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ===== シェアボタン ===== */}
+          <motion.div variants={item} className="flex gap-3">
+            <a
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`私の学習タイプは「${result.name}（${result.code}）」でした！\n${result.tagline}\n#勉強タイプ診断 #学習OS`)}&url=${encodeURIComponent(`https://16studytype.vercel.app/types/${result.code}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-[#e4e0f7] text-sm font-medium text-[#1e1b4b] hover:bg-violet-50 transition-colors cursor-pointer shadow-sm"
             >
-              診断をやり直す →
-            </Link>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.26 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              結果をシェア
+            </a>
+            <button
+              onClick={() => {
+                const text = `私の学習タイプは「${result.name}（${result.code}）」でした！\n${result.tagline}\n#勉強タイプ診断`;
+                navigator.clipboard?.writeText(text);
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-[#e4e0f7] text-sm font-medium text-[#1e1b4b] hover:bg-violet-50 transition-colors cursor-pointer shadow-sm"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              テキストコピー
+            </button>
+          </motion.div>
+
+          {/* ===== フッターボタン ===== */}
+          <motion.div variants={item} className="pt-2">
             <Link
               href="/"
               className="block w-full text-center py-3 rounded-xl text-sm text-gray-400 bg-white border border-[#e4e0f7] hover:border-violet-200 hover:text-violet-500 transition-all"
             >
-              トップに戻る
+              もう一度診断する
             </Link>
           </motion.div>
 

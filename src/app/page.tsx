@@ -1,13 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDiagnosis } from "@/hooks/useDiagnosis";
 import TopScreen from "@/components/TopScreen";
 import QuestionScreen from "@/components/QuestionScreen";
 import AnalyzingScreen from "@/components/AnalyzingScreen";
-import ResultScreen from "@/components/ResultScreen";
 
 export default function Home() {
+  const router = useRouter();
   const {
     phase,
     currentPage,
@@ -15,12 +17,17 @@ export default function Home() {
     pageQuestions,
     pageAnswers,
     canSubmitPage,
-    result,
+    resultCode,
     start,
     setAnswer,
     submitPage,
-    restart,
   } = useDiagnosis();
+
+  useEffect(() => {
+    if (phase === "result" && resultCode) {
+      router.push(`/types/${resultCode}`);
+    }
+  }, [phase, resultCode, router]);
 
   return (
     <main className="min-h-screen relative">
@@ -69,17 +76,7 @@ export default function Home() {
           </motion.div>
         )}
 
-        {phase === "result" && result && (
-          <motion.div
-            key="result"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            <ResultScreen result={result} onRestart={restart} />
-          </motion.div>
-        )}
+        {/* result phase: useEffect でリダイレクト */}
       </AnimatePresence>
     </main>
   );
