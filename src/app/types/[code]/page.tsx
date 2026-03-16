@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, type Variants } from "framer-motion";
 import resultsData from "@/data/results.json";
@@ -9,6 +10,8 @@ import typeDetailsData from "@/data/typeDetails.json";
 type ResultType = {
   code: string;
   name: string;
+  nickname: string;
+  historicalName: string;
   emoji: string;
   era: string;
   tagline: string;
@@ -40,7 +43,7 @@ const container: Variants = {
 };
 const item: Variants = {
   hidden: { opacity: 0, y: 22 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.48, ease: "easeOut" } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.48, ease: "easeOut" as const } },
 };
 
 function RelatedCard({ code, label }: { code: string; label: string }) {
@@ -49,14 +52,22 @@ function RelatedCard({ code, label }: { code: string; label: string }) {
   if (!r) return null;
   return (
     <Link href={`/types/${code}`} className="block group">
-      <div className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#e4e0f7] shadow-sm hover:shadow-md hover:border-violet-300 transition-all">
-        <span className="text-3xl">{r.emoji}</span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest mb-0.5">{label}</div>
-          <div className="text-sm font-bold text-[#1e1b4b] truncate">{r.name}</div>
-          <div className="text-[10px] text-gray-400">{code}</div>
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[var(--border)] shadow-sm hover:shadow-md hover:border-black/20 transition-all">
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[var(--bg)]">
+          <Image
+            src={`/images/characters/${code}.jpg`}
+            alt={r.historicalName}
+            width={48}
+            height={48}
+            className="object-cover w-full h-full"
+          />
         </div>
-        <span className="text-gray-300 group-hover:text-violet-400 transition-colors text-lg">→</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-0.5">{label}</div>
+          <div className="text-sm font-bold text-[var(--fg)] truncate">{r.historicalName}</div>
+          <div className="text-[10px] text-[var(--muted)]">{code}</div>
+        </div>
+        <span className="text-[var(--muted)] group-hover:text-black transition-colors text-lg">→</span>
       </div>
     </Link>
   );
@@ -76,15 +87,14 @@ export default function TypeDetailPage({
   const result = types[upperCode];
   const detail = details[upperCode];
 
-  // タイプが存在しない場合
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f5f3ff] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
         <div className="text-center">
           <div className="text-5xl mb-4">🔍</div>
-          <h1 className="text-xl font-bold text-[#1e1b4b] mb-2">タイプが見つかりません</h1>
-          <p className="text-sm text-gray-500 mb-6">コード「{code}」は存在しません。</p>
-          <Link href="/" className="inline-block px-6 py-3 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors">
+          <h1 className="text-xl font-bold text-[var(--fg)] mb-2">タイプが見つかりません</h1>
+          <p className="text-sm text-[var(--muted)] mb-6">コード「{code}」は存在しません。</p>
+          <Link href="/" className="inline-block px-6 py-3 rounded-xl bg-black text-white font-semibold text-sm hover:bg-gray-800 transition-colors">
             診断に戻る
           </Link>
         </div>
@@ -92,22 +102,12 @@ export default function TypeDetailPage({
     );
   }
 
-  // 詳細ページが未作成の場合
   if (!detail) {
     return (
-      <div className="min-h-screen bg-[#f5f3ff] px-4 py-10">
-        <div className="max-w-2xl mx-auto">
-          <div className={`rounded-3xl overflow-hidden shadow-lg mb-6 bg-gradient-to-br ${result.color} p-10 flex flex-col items-center text-center`}>
-            <div className="text-6xl mb-4">{result.emoji}</div>
-            <h1 className="text-2xl font-bold text-white mb-1">{result.name}</h1>
-            <div className="text-white/60 text-sm mb-3">{result.code} · {result.era}</div>
-            <p className="text-white/80 text-sm leading-relaxed">{result.tagline}</p>
-          </div>
-          <div className="rounded-2xl bg-white border border-[#e4e0f7] p-8 text-center shadow-sm">
-            <div className="text-3xl mb-3">🚧</div>
-            <h2 className="text-base font-bold text-[#1e1b4b] mb-2">詳細ページ準備中</h2>
-            <p className="text-sm text-gray-500">このタイプの詳細コンテンツは近日公開予定です。</p>
-          </div>
+      <div className="min-h-screen bg-[var(--bg)] px-4 py-10">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="text-3xl mb-3">🚧</div>
+          <p className="text-sm text-[var(--muted)]">このタイプの詳細コンテンツは近日公開予定です。</p>
         </div>
       </div>
     );
@@ -120,57 +120,76 @@ export default function TypeDetailPage({
   const paragraphsWeaknesses = detail.weaknessesDetail.split("\n\n");
   const paragraphsMessage = detail.messageBody.split("\n\n");
 
+  const shareText = encodeURIComponent(
+    `私の学習タイプは「${result.name}（${result.code}）」でした！\n${result.tagline}\n#勉強タイプ診断 #学習OS`
+  );
+  const shareUrl = encodeURIComponent(`https://16studytype.vercel.app/types/${result.code}`);
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
+
   return (
-    <div className="min-h-screen bg-[#f5f3ff] relative overflow-hidden">
-      {/* Ambient glow */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[50rem] h-72 rounded-full blur-3xl opacity-20 pointer-events-none"
-        style={{ backgroundColor: result.accentColor }}
-      />
+    <div className="min-h-screen bg-[var(--bg)]">
+      <div className="max-w-xl mx-auto px-4 py-8 pb-24">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="flex flex-col gap-5"
+        >
 
-      <div className="relative z-10 max-w-2xl mx-auto px-4 py-8 pb-20">
-        <motion.div variants={container} initial="hidden" animate="show" className="flex flex-col gap-5">
+          {/* ===== ヒーローセクション ===== */}
+          <motion.div variants={item} className="pt-2">
+            {/* あなたの勉強タイプは */}
+            <p className="text-sm font-bold text-[var(--accent)] mb-2 tracking-wide">
+              あなたの勉強タイプは...
+            </p>
 
-          {/* ===== ヘッダー ===== */}
-          <motion.div variants={item} className="rounded-3xl overflow-hidden shadow-lg">
-            <div className={`bg-gradient-to-br ${result.color} p-8 flex flex-col items-center text-center`}>
-              {/* コードバッジ */}
-              <div className="flex gap-1.5 mb-5">
-                {result.code.split("").map((letter, i) => (
-                  <motion.span
-                    key={i}
-                    className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-sm font-bold text-white"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 280 }}
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </div>
-              <motion.div
-                className="w-24 h-24 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-5xl mb-4 border border-white/20"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.25, type: "spring", stiffness: 200 }}
-              >
-                {result.emoji}
-              </motion.div>
-              <div className="text-xs text-white/60 mb-1">{result.era}</div>
-              <div className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">あなたの勉強タイプ</div>
-              <h1 className="text-2xl font-bold text-white mb-1">{detail.characterName}</h1>
-              <p className="text-sm text-white/75 leading-relaxed mt-1">{result.tagline}</p>
+            {/* ニックネーム（黄色ハイライト） */}
+            <div className="mb-1">
+              <span className="inline-block bg-[var(--yellow)] text-black text-base font-bold px-2 py-0.5 leading-tight">
+                {result.nickname}
+              </span>
+            </div>
+
+            {/* 歴史的人物名（大きく太く） */}
+            <h1 className="text-4xl font-black text-[var(--fg)] leading-none mb-4 tracking-tight">
+              {result.historicalName}
+            </h1>
+
+            {/* タイプコード（アウトライン） */}
+            <p
+              className="text-outline text-6xl font-black tracking-widest mb-5 leading-none"
+            >
+              {result.code}
+            </p>
+
+            {/* タグライン（左ボーダー） */}
+            <div className="border-l-4 border-[var(--accent)] pl-4 mb-6">
+              <p className="text-sm text-[var(--fg)] leading-relaxed font-medium">
+                {result.tagline}
+              </p>
+            </div>
+
+            {/* キャラクター画像 */}
+            <div className="rounded-3xl overflow-hidden bg-white border border-[var(--border)] shadow-sm">
+              <Image
+                src={`/images/characters/${result.code}.jpg`}
+                alt={result.historicalName}
+                width={600}
+                height={600}
+                className="w-full h-auto"
+                priority
+              />
             </div>
           </motion.div>
 
           {/* ===== キャラクター概要 ===== */}
-          <motion.div variants={item} className="rounded-2xl bg-white shadow-sm border border-[#e4e0f7] p-6">
-            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: result.accentColor }}>
-              キャラクター概要
-            </div>
+          <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-[var(--border)]">
+            <h2 className="text-base font-black text-[var(--fg)] mb-4">
+              あなたはどんな勉強タイプ？
+            </h2>
             <div className="space-y-3">
               {paragraphsOverview.map((p, i) => (
-                <p key={i} className="text-sm text-[#374151] leading-relaxed">{p}</p>
+                <p key={i} className="text-sm text-[#3A3530] leading-relaxed">{p}</p>
               ))}
             </div>
           </motion.div>
@@ -178,163 +197,147 @@ export default function TypeDetailPage({
           {/* ===== 格言 ===== */}
           <motion.div
             variants={item}
-            className="rounded-2xl bg-white shadow-sm p-6"
-            style={{ borderLeft: `4px solid ${result.accentColor}` }}
+            className="bg-[var(--fg)] rounded-3xl p-6"
           >
-            <div className="text-xs font-semibold uppercase tracking-widest mb-3 text-gray-400">
+            <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3">
               格言
             </div>
-            <blockquote className="text-base font-medium text-[#1e1b4b] leading-relaxed italic">
+            <blockquote className="text-base font-bold text-white leading-relaxed">
               「{detail.quote}」
             </blockquote>
           </motion.div>
 
           {/* ===== 人物との関連性 ===== */}
-          <motion.div variants={item} className="rounded-2xl bg-white shadow-sm border border-[#e4e0f7] p-6">
-            <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: result.accentColor }}>
-              {result.name}という人物との関連性
+          <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-[var(--border)]">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-block w-3 h-3 rounded-full bg-[var(--yellow)] border-2 border-black" />
+              <h2 className="text-sm font-black text-[var(--fg)] uppercase tracking-wide">
+                {result.historicalName}との関連性
+              </h2>
             </div>
             <div className="space-y-3">
               {paragraphsConnection.map((p, i) => (
-                <p key={i} className="text-sm text-[#374151] leading-relaxed">{p}</p>
+                <p key={i} className="text-sm text-[#3A3530] leading-relaxed">{p}</p>
               ))}
             </div>
           </motion.div>
 
           {/* ===== 歴史コラム ===== */}
-          <motion.div variants={item} className="rounded-2xl overflow-hidden shadow-sm border border-[#e4e0f7]">
-            <div className="px-6 pt-5 pb-2 bg-white">
-              <div className="text-xs font-semibold uppercase tracking-widest mb-1 text-gray-400">Column</div>
-              <div className="flex items-baseline gap-2 mb-4">
-                <h2 className="text-base font-bold text-[#1e1b4b]">{detail.historyTitle}</h2>
-                <span className="text-xs text-gray-400">{detail.historyEra}</span>
-              </div>
+          <motion.div variants={item} className="bg-white rounded-3xl overflow-hidden border border-[var(--border)]">
+            <div className="bg-[var(--yellow)] px-6 py-4">
+              <div className="text-[10px] font-bold text-black/50 uppercase tracking-widest mb-1">Column</div>
+              <h2 className="text-base font-black text-black">{detail.historyTitle}</h2>
+              <span className="text-xs text-black/50">{detail.historyEra}</span>
             </div>
-            <div className="px-6 pb-6 bg-white space-y-3">
+            <div className="px-6 py-5 space-y-3">
               {paragraphsHistory.map((p, i) => (
-                <p key={i} className="text-sm text-[#374151] leading-relaxed">{p}</p>
+                <p key={i} className="text-sm text-[#3A3530] leading-relaxed">{p}</p>
               ))}
             </div>
           </motion.div>
 
           {/* ===== 強み・弱み ===== */}
-          <motion.div variants={item} className="grid grid-cols-1 gap-4">
-            <div className="rounded-2xl bg-white border border-emerald-100 shadow-sm p-6">
-              <div className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-3">あなたの強み</div>
-              <div className="space-y-3">
+          <motion.div variants={item} className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-3xl p-5 border border-[var(--border)]">
+              <div className="text-xs font-black text-black mb-1">⚡ 強み</div>
+              <div className="w-8 h-0.5 bg-[var(--yellow)] mb-3" />
+              <div className="space-y-2">
                 {paragraphsStrengths.map((p, i) => (
-                  <p key={i} className="text-sm text-[#374151] leading-relaxed">{p}</p>
+                  <p key={i} className="text-xs text-[#3A3530] leading-relaxed">{p}</p>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl bg-white border border-rose-100 shadow-sm p-6">
-              <div className="text-xs font-semibold text-rose-500 uppercase tracking-widest mb-3">克服すべき弱み</div>
-              <div className="space-y-3">
+            <div className="bg-white rounded-3xl p-5 border border-[var(--border)]">
+              <div className="text-xs font-black text-black mb-1">⚠ 弱み</div>
+              <div className="w-8 h-0.5 bg-black/20 mb-3" />
+              <div className="space-y-2">
                 {paragraphsWeaknesses.map((p, i) => (
-                  <p key={i} className="text-sm text-[#374151] leading-relaxed">{p}</p>
+                  <p key={i} className="text-xs text-[#3A3530] leading-relaxed">{p}</p>
                 ))}
               </div>
             </div>
           </motion.div>
 
           {/* ===== あるある ===== */}
-          <motion.div variants={item} className="rounded-2xl bg-white shadow-sm border border-[#e4e0f7] p-6">
-            <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: result.accentColor }}>
-              {result.name}の「あるある」
-            </div>
+          <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-[var(--border)]">
+            <h2 className="text-base font-black text-[var(--fg)] mb-4">
+              {result.historicalName}の「あるある」
+            </h2>
             <ul className="space-y-3">
-              {detail.aruaru.map((item_text, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-[#374151] leading-relaxed">
-                  <span
-                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white mt-0.5"
-                    style={{ backgroundColor: result.accentColor }}
-                  >
+              {detail.aruaru.map((text, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-[#3A3530] leading-relaxed">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--yellow)] border-2 border-black flex items-center justify-center text-[10px] font-black text-black mt-0.5">
                     {i + 1}
                   </span>
-                  {item_text}
+                  {text}
                 </li>
               ))}
             </ul>
           </motion.div>
 
           {/* ===== 相棒とライバル ===== */}
-          <motion.div variants={item} className="rounded-2xl bg-white shadow-sm border border-[#e4e0f7] p-6">
-            <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: result.accentColor }}>
-              相棒とライバル
-            </div>
+          <motion.div variants={item} className="bg-white rounded-3xl p-6 border border-[var(--border)]">
+            <h2 className="text-base font-black text-[var(--fg)] mb-4">相棒とライバル</h2>
             <div className="flex flex-col gap-4">
               {[detail.companion, detail.rival].map((rel) => (
                 <div key={rel.code}>
                   <RelatedCard code={rel.code} label={rel.label} />
-                  <p className="mt-2 text-xs text-[#6b7280] leading-relaxed px-1">{rel.text}</p>
+                  <p className="mt-2 text-xs text-[var(--muted)] leading-relaxed px-1">{rel.text}</p>
                 </div>
               ))}
             </div>
           </motion.div>
 
           {/* ===== メッセージ ===== */}
-          <motion.div
-            variants={item}
-            className="rounded-3xl overflow-hidden shadow-md"
-            style={{ background: `linear-gradient(135deg, ${result.accentColor}ee 0%, #1e1b4b 100%)` }}
-          >
-            <div className="p-7">
-              <div className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-3">Message</div>
-              <blockquote className="text-sm font-semibold text-white leading-relaxed mb-5 border-l-2 border-white/30 pl-4 italic">
-                「{detail.messageQuote}」
-              </blockquote>
-              <div className="space-y-3">
-                {paragraphsMessage.map((p, i) => (
-                  <p key={i} className="text-sm text-white/80 leading-relaxed">{p}</p>
-                ))}
-              </div>
+          <motion.div variants={item} className="bg-[var(--fg)] rounded-3xl p-7">
+            <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">Message</div>
+            <blockquote className="text-sm font-bold text-[var(--yellow)] leading-relaxed mb-5 border-l-2 border-[var(--yellow)]/30 pl-4">
+              「{detail.messageQuote}」
+            </blockquote>
+            <div className="space-y-3">
+              {paragraphsMessage.map((p, i) => (
+                <p key={i} className="text-sm text-white/80 leading-relaxed">{p}</p>
+              ))}
             </div>
           </motion.div>
 
           {/* ===== SaaS CTA ===== */}
-          <motion.div
-            variants={item}
-            className="rounded-3xl overflow-hidden shadow-md"
-            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)" }}
-          >
-            <div className="p-5">
-              <div className="text-[10px] text-violet-200 font-semibold tracking-widest uppercase mb-2">
-                🚀 Next Step
-              </div>
-              <h3 className="text-base font-bold text-white mb-1.5">
-                あなたの学習タイプに合わせた環境で学ぼう
-              </h3>
-              <p className="text-xs text-violet-100/80 leading-relaxed mb-4">
-                {result.saasMessage}
-                <br />
-                オンライン自習室とAI学習サポートで、{result.name}の力を最大限に引き出しましょう。
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <a
-                  href="#"
-                  className="flex-1 block text-center py-3.5 rounded-xl font-semibold text-sm text-[#6d28d9] bg-white cursor-pointer hover:bg-violet-50 transition-colors"
-                >
-                  無料でオンライン自習室を試す →
-                </a>
-                <a
-                  href="#"
-                  className="flex-1 block text-center py-3 rounded-xl text-xs text-white/70 border border-white/20 hover:border-white/40 transition-colors cursor-pointer"
-                >
-                  AI学習サポートについて詳しく見る
-                </a>
-              </div>
+          <motion.div variants={item} className="bg-[var(--yellow)] rounded-3xl p-6 border-2 border-black">
+            <div className="text-[10px] font-black text-black/50 uppercase tracking-widest mb-2">
+              🚀 Next Step
+            </div>
+            <h3 className="text-base font-black text-black mb-2">
+              あなたの学習タイプに合わせた環境で学ぼう
+            </h3>
+            <p className="text-xs text-black/70 leading-relaxed mb-4">
+              {result.saasMessage}<br />
+              オンライン自習室とAI学習サポートで、{result.historicalName}の力を最大限に引き出しましょう。
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <a
+                href="#"
+                className="flex-1 block text-center py-3.5 rounded-2xl font-black text-sm text-white bg-black hover:bg-gray-800 transition-colors"
+              >
+                無料でオンライン自習室を試す →
+              </a>
+              <a
+                href="#"
+                className="flex-1 block text-center py-3 rounded-2xl text-xs text-black/70 border-2 border-black/30 hover:border-black transition-colors"
+              >
+                AI学習サポートを詳しく見る
+              </a>
             </div>
           </motion.div>
 
           {/* ===== シェアボタン ===== */}
           <motion.div variants={item} className="flex gap-3">
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`私の学習タイプは「${result.name}（${result.code}）」でした！\n${result.tagline}\n#勉強タイプ診断 #学習OS`)}&url=${encodeURIComponent(`https://16studytype.vercel.app/types/${result.code}`)}`}
+              href={twitterUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-[#e4e0f7] text-sm font-medium text-[#1e1b4b] hover:bg-violet-50 transition-colors cursor-pointer shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-black text-white text-sm font-bold hover:bg-gray-800 transition-colors cursor-pointer"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.26 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
               結果をシェア
@@ -344,9 +347,9 @@ export default function TypeDetailPage({
                 const text = `私の学習タイプは「${result.name}（${result.code}）」でした！\n${result.tagline}\n#勉強タイプ診断`;
                 navigator.clipboard?.writeText(text);
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-[#e4e0f7] text-sm font-medium text-[#1e1b4b] hover:bg-violet-50 transition-colors cursor-pointer shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-white border-2 border-[var(--border)] text-sm font-bold text-[var(--fg)] hover:border-black transition-colors cursor-pointer"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
@@ -354,11 +357,11 @@ export default function TypeDetailPage({
             </button>
           </motion.div>
 
-          {/* ===== フッターボタン ===== */}
-          <motion.div variants={item} className="pt-2">
+          {/* ===== フッター ===== */}
+          <motion.div variants={item}>
             <Link
               href="/"
-              className="block w-full text-center py-3 rounded-xl text-sm text-gray-400 bg-white border border-[#e4e0f7] hover:border-violet-200 hover:text-violet-500 transition-all"
+              className="block w-full text-center py-3.5 rounded-2xl text-sm font-bold text-[var(--muted)] bg-white border border-[var(--border)] hover:border-black hover:text-black transition-all"
             >
               もう一度診断する
             </Link>

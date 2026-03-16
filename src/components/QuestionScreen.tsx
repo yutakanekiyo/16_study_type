@@ -22,7 +22,6 @@ interface QuestionScreenProps {
   onSubmitPage: () => void;
 }
 
-// 両端を大きく、中央を小さく
 const BUTTON_SIZES = [44, 34, 26, 26, 34, 44];
 
 export default function QuestionScreen({
@@ -37,20 +36,16 @@ export default function QuestionScreen({
   const isLastPage = currentPage + 1 >= totalPages;
   const answeredCount = pageAnswers.filter((a) => a !== null).length;
   const totalQuestions = totalPages * 5;
-  const totalAnswered = currentPage * 6 + answeredCount;
-  const remaining = totalQuestions - totalAnswered;
+  const totalAnswered = currentPage * 5 + answeredCount;
 
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const submitRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToCard = (idx: number) => {
     const el = cardRefs.current[idx];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  // ページ切り替え時：最初の未回答質問を中央へ
   useEffect(() => {
     const firstUnanswered = pageAnswers.findIndex((a) => a === null);
     const targetIdx = firstUnanswered === -1 ? 0 : firstUnanswered;
@@ -61,43 +56,43 @@ export default function QuestionScreen({
 
   const handleSetAnswer = (idx: number, rating: Rating) => {
     onSetAnswer(idx, rating);
-
-    // 次の未回答へスクロール
     setTimeout(() => {
-      const nextUnanswered = pageAnswers.findIndex(
-        (a, i) => i > idx && a === null
-      );
+      const nextUnanswered = pageAnswers.findIndex((a, i) => i > idx && a === null);
       if (nextUnanswered !== -1) {
         scrollToCard(nextUnanswered);
       } else {
-        // 全問回答済み → 送信ボタンへ
         submitRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 120);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* 進捗エリア */}
-      <div className="px-5 pt-6 pb-3 w-full max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-gray-400 font-medium">
-            残り<span className="text-violet-500 font-bold text-sm mx-0.5">{remaining}</span>問
-          </span>
-          <span className="text-xs text-gray-400">{totalAnswered} / {totalQuestions}</span>
-        </div>
-        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
-            initial={false}
-            animate={{ width: `${(totalAnswered / totalQuestions) * 100}%` }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          />
+    <div className="min-h-screen flex flex-col bg-[var(--bg)]">
+
+      {/* 進捗バー */}
+      <div className="sticky top-0 z-20 bg-[var(--bg)] border-b border-[var(--border)] px-5 pt-4 pb-3">
+        <div className="max-w-xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[var(--muted)]">
+              Q{totalAnswered + 1} <span className="text-[var(--fg)]">/ {totalQuestions}</span>
+            </span>
+            <span className="text-xs font-black text-[var(--fg)]">
+              {Math.round((totalAnswered / totalQuestions) * 100)}%
+            </span>
+          </div>
+          <div className="h-2 bg-[var(--border)] rounded-full overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-[var(--fg)]"
+              initial={false}
+              animate={{ width: `${(totalAnswered / totalQuestions) * 100}%` }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
         </div>
       </div>
 
       {/* 質問リスト */}
-      <div className="flex-1 px-4 pt-2 pb-6 w-full max-w-2xl mx-auto">
+      <div className="flex-1 px-4 pt-4 pb-6 max-w-xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentPage}
@@ -109,7 +104,7 @@ export default function QuestionScreen({
           >
             {pageQuestions.map((q, idx) => {
               const selected = pageAnswers[idx];
-              const globalNum = currentPage * 6 + idx + 1;
+              const globalNum = currentPage * 5 + idx + 1;
               const isAnswered = selected !== null;
 
               return (
@@ -119,27 +114,29 @@ export default function QuestionScreen({
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05, duration: 0.3 }}
-                  className="rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200"
+                  className="rounded-3xl bg-white border-2 p-5 transition-all duration-200"
                   style={{
-                    borderColor: isAnswered ? "#c4b5fd" : "#e5e7eb",
-                    boxShadow: isAnswered
-                      ? "0 2px 12px rgba(109,40,217,0.08)"
-                      : "0 1px 4px rgba(0,0,0,0.05)",
+                    borderColor: isAnswered ? "#1A1A1A" : "var(--border)",
+                    boxShadow: isAnswered ? "4px 4px 0px 0px rgba(0,0,0,1)" : "none",
                   }}
                 >
-                  {/* 質問番号 + テキスト */}
-                  <p className="text-[13px] font-semibold text-gray-800 leading-relaxed mb-4 text-center">
-                    <span className="text-violet-500 font-bold mr-1">Q{globalNum}.</span>
+                  {/* Q番号 + 質問テキスト */}
+                  <p className="text-[13px] font-bold text-[var(--fg)] leading-relaxed mb-4 text-center">
+                    <span
+                      className="inline-block bg-[var(--yellow)] text-black text-[11px] font-black px-2 py-0.5 rounded-full mr-1.5"
+                    >
+                      Q{globalNum}
+                    </span>
                     {q.text}
                   </p>
 
-                  {/* 選択肢ラベル（縦積み） */}
-                  <div className="mb-3 text-center space-y-1">
-                    <p className="text-[12px] leading-snug text-violet-600">
-                      <span className="font-bold">A：</span>{q.optionA}
+                  {/* 選択肢ラベル */}
+                  <div className="mb-4 space-y-1.5 text-center">
+                    <p className="text-[12px] text-[var(--fg)]">
+                      <span className="font-black">A：</span>{q.optionA}
                     </p>
-                    <p className="text-[12px] leading-snug text-indigo-500">
-                      <span className="font-bold">B：</span>{q.optionB}
+                    <p className="text-[12px] text-[var(--muted)]">
+                      <span className="font-black">B：</span>{q.optionB}
                     </p>
                   </div>
 
@@ -154,22 +151,16 @@ export default function QuestionScreen({
                         <button
                           key={rating}
                           onClick={() => handleSetAnswer(idx, rating)}
-                          className="rounded-full flex-shrink-0 border-2 cursor-pointer"
+                          className="rounded-full flex-shrink-0 border-2 cursor-pointer transition-all duration-150"
                           style={{
                             width: size,
                             height: size,
                             backgroundColor: isSelected
-                              ? isAside ? "#7c3aed" : "#4f46e5"
-                              : "white",
-                            borderColor: isSelected
-                              ? isAside ? "#7c3aed" : "#4f46e5"
-                              : isAnswered ? "#e5e7eb" : "#c4b5fd",
+                              ? "#1A1A1A"
+                              : isAside ? "#FFF8C0" : "#F0F0F0",
+                            borderColor: isSelected ? "#1A1A1A" : "var(--border)",
                             transform: isSelected ? "scale(1.18)" : "scale(1)",
-                            boxShadow: isSelected
-                              ? `0 0 0 3px ${isAside ? "#7c3aed25" : "#4f46e525"}`
-                              : "none",
-                            opacity: isAnswered && !isSelected ? 0.3 : 1,
-                            transition: "all 0.15s ease",
+                            opacity: isAnswered && !isSelected ? 0.4 : 1,
                           }}
                           aria-label={`${rating}を選択`}
                         />
@@ -178,9 +169,9 @@ export default function QuestionScreen({
                   </div>
 
                   {/* A / B ラベル */}
-                  <div className="flex justify-between mt-1 px-0.5">
-                    <span className="text-[11px] font-bold text-violet-500">A</span>
-                    <span className="text-[11px] font-bold text-indigo-500">B</span>
+                  <div className="flex justify-between mt-1.5 px-0.5">
+                    <span className="text-[11px] font-black text-[var(--fg)]">A</span>
+                    <span className="text-[11px] font-black text-[var(--muted)]">B</span>
                   </div>
                 </motion.div>
               );
@@ -188,7 +179,7 @@ export default function QuestionScreen({
           </motion.div>
         </AnimatePresence>
 
-        {/* 次へ / 結果を見るボタン */}
+        {/* 次へボタン */}
         <motion.div
           ref={submitRef}
           className="mt-5 pb-10"
@@ -199,15 +190,11 @@ export default function QuestionScreen({
           <motion.button
             onClick={onSubmitPage}
             disabled={!canSubmitPage}
-            className="w-full md:max-w-sm md:mx-auto block py-4 rounded-2xl font-bold text-[15px] cursor-pointer transition-all duration-200"
+            className="w-full py-4 rounded-2xl font-black text-[15px] cursor-pointer transition-all duration-200"
             style={{
-              background: canSubmitPage
-                ? "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
-                : "#f3f4f6",
-              color: canSubmitPage ? "white" : "#d1d5db",
-              boxShadow: canSubmitPage
-                ? "0 6px 24px rgba(109,40,217,0.28)"
-                : "none",
+              background: canSubmitPage ? "#1A1A1A" : "var(--border)",
+              color: canSubmitPage ? "white" : "var(--muted)",
+              boxShadow: canSubmitPage ? "4px 4px 0px 0px rgba(255,229,0,1)" : "none",
             }}
             whileTap={canSubmitPage ? { scale: 0.98 } : {}}
           >
@@ -227,8 +214,7 @@ export default function QuestionScreen({
                 style={{
                   width: i === currentPage ? 22 : 6,
                   height: 6,
-                  backgroundColor:
-                    i < currentPage ? "#7c3aed" : i === currentPage ? "#7c3aed" : "#e5e7eb",
+                  backgroundColor: i <= currentPage ? "#1A1A1A" : "var(--border)",
                 }}
               />
             ))}
